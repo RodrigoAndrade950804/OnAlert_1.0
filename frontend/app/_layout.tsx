@@ -4,6 +4,16 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AlertProvider, useAlerts } from '@/src/application/context/AlertContext';
 import {  colors  } from '@onalert/shared';
 
+const originalFetch = global.fetch;
+global.fetch = async (input, init) => {
+  init = init || {};
+  init.headers = {
+    ...init.headers,
+    'ngrok-skip-browser-warning': 'true',
+  };
+  return originalFetch(input, init);
+};
+
 function RootNavigator() {
   const { isLoading, user } = useAlerts();
 
