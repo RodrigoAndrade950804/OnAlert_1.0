@@ -14,6 +14,11 @@ export function SuperAdminDashboard() {
   const [community, setCommunity] = useState(QUITO_SECTORS[0]);
   const [users, setUsers] = useState<User[]>([]);
 
+  // Edit State
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -100,6 +105,43 @@ export function SuperAdminDashboard() {
     loadUsers();
   };
 
+  const handleEditClick = (u: User) => {
+    setEditingUser(u);
+    setEditName(u.name);
+    setEditEmail(u.email);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser) return;
+    if (!editName.trim() || !editEmail.trim()) {
+      if (Platform.OS === 'web') window.alert('Llena todos los campos');
+      else Alert.alert('Error', 'Llena todos los campos');
+      return;
+    }
+    
+    try {
+      const { getApiGatewayUrl } = require('@onalert/shared');
+      const API_URL = getApiGatewayUrl();
+      const res = await fetch(`${API_URL}/api/auth/user/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim(), email: editEmail.trim(), role: editingUser.role })
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        if (Platform.OS === 'web') window.alert(errorData.error);
+        else Alert.alert('Error', errorData.error);
+        return;
+      }
+    } catch (err) {
+      console.warn('Error editando usuario en remoto:', err);
+    }
+
+    await UserService.updateUser(editingUser.id, { name: editName.trim(), email: editEmail.trim(), role: editingUser.role });
+    setEditingUser(null);
+    loadUsers();
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -148,14 +190,40 @@ export function SuperAdminDashboard() {
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{item.name}</Text>
               <Text style={styles.userEmail}>{item.email}</Text>
-              <Text style={styles.userSector}>📍 {item.community}</Text>
+              <Text style={styles.userSector}>📍 {item.community} ({item.role})</Text>
             </View>
-            <Pressable onPress={() => handleDelete(item.id)} style={styles.deleteBtn}>
+            <Pressable onPress={() => handleEditClick(item)} style={[styles.actionBtnIcon, { backgroundColor: '#DBEAFE', marginRight: 8 }]}>
+              <Ionicons name="pencil" size={20} color={colors.info} />
+            </Pressable>
+            <Pressable onPress={() => handleDelete(item.id)} style={[styles.actionBtnIcon, { backgroundColor: '#FEE2E2' }]}>
               <Ionicons name="trash" size={20} color={colors.error} />
             </Pressable>
           </View>
         )}
       />
+
+      {editingUser && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.formTitle}>Editar Usuario</Text>
+            <Text style={styles.label}>Nombre Completo</Text>
+            <TextInput style={styles.input} value={editName} onChangeText={setEditName} />
+            
+            <Text style={styles.label}>Correo Electrónico</Text>
+            <TextInput style={styles.input} value={editEmail} onChangeText={setEditEmail} keyboardType="email-address" autoCapitalize="none" />
+
+            <View style={styles.modalActions}>
+              <Pressable style={[styles.submitBtn, { flex: 1, backgroundColor: colors.textSecondary }]} onPress={() => setEditingUser(null)}>
+                <Text style={styles.submitText}>Cancelar</Text>
+              </Pressable>
+              <View style={{ width: 10 }} />
+              <Pressable style={[styles.submitBtn, { flex: 1 }]} onPress={handleSaveEdit}>
+                <Text style={styles.submitText}>Guardar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -180,6 +248,9 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1 },
   userName: { fontSize: 16, fontWeight: '700', color: colors.text },
   userEmail: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
-  userSector: { fontSize: 13, color: colors.info, marginTop: 4, fontWeight: '600' },
-  deleteBtn: { padding: 8, backgroundColor: '#FEE2E2', borderRadius: 8 },
+  userSector: { fontSize: 13, color: colors.info, marginTop: 4, fontWeight: '600', textTransform: 'capitalize' },
+  actionBtnIcon: { padding: 8, borderRadius: 8 },
+  modalOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: colors.surface, padding: 20, borderRadius: 16 },
+  modalActions: { flexDirection: 'row', marginTop: 10 }
 });

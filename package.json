@@ -13,5 +13,9 @@
     "start:backend": "npm start --prefix backend",
     "backend:gateway": "npm start -w gateway",
     "install:all": "npm install"
+  },
+  "dependencies": {
+    "mongoose": "^9.7.4",
+    "pg": "^8.22.0"
   }
 }

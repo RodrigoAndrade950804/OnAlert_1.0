@@ -177,6 +177,21 @@ app.post('/api/incidents/:id/confirm', async (req, res) => {
   }
 });
 
+// Eliminar un incidente (Solo permitimos lógicamente o físicamente si el admin lo requiere)
+app.delete('/api/incidents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Incident.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Incidente no encontrado' });
+    }
+    res.json({ message: 'Incidente eliminado exitosamente', id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al eliminar incidente' });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'Incident Service' });

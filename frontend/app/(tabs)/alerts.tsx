@@ -55,13 +55,14 @@ export default function AlertsScreen() {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        horizontal
-        data={filters}
-        keyExtractor={(item) => item}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filters}
-        renderItem={({ item }) => (
+      <View style={{ flexGrow: 0, paddingBottom: 8 }}>
+        <FlatList
+          horizontal
+          data={filters}
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+          renderItem={({ item }) => (
           <Pressable
             style={[styles.filterChip, filter === item && styles.filterChipActive]}
             onPress={() => setFilter(item)}
@@ -77,6 +78,7 @@ export default function AlertsScreen() {
           </Pressable>
         )}
       />
+      </View>
 
       <FlatList
         data={sortedIncidents}

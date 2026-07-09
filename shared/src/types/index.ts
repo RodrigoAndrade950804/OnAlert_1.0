@@ -11,7 +11,7 @@ export type IncidentType =
 
 export type IncidentPriority = 'alta' | 'media' | 'baja';
 
-export type IncidentStatus = 'activo' | 'validado' | 'rechazado' | 'cerrado';
+export type IncidentStatus = 'activo' | 'validado' | 'rechazado' | 'cerrado' | 'atendido';
 
 export interface User {
   id: string;

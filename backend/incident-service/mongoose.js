@@ -31,7 +31,7 @@ const IncidentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['activo', 'validado', 'rechazado', 'cerrado'],
+    enum: ['activo', 'validado', 'rechazado', 'cerrado', 'atendido'],
     default: 'activo'
   },
   media_urls: { type: [String], default: [] },

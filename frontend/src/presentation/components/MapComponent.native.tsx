@@ -106,10 +106,17 @@ export default function MapComponent() {
             />
           )}
 
-          {visibleIncidents.map((incident) => (
+          {visibleIncidents.map((incident, index) => {
+            const offsetLat = (index % 5) * 0.00015;
+            const offsetLng = (index % 3) * 0.00015;
+            
+            return (
             <Marker
               key={incident.id}
-              coordinate={incident.location}
+              coordinate={{
+                latitude: incident.location.latitude + offsetLat,
+                longitude: incident.location.longitude + offsetLng,
+              }}
               pinColor={markerColors[incident.priority]}
             >
               <Callout onPress={() => router.push(`/incident/${incident.id}`)}>
@@ -122,7 +129,8 @@ export default function MapComponent() {
                 </View>
               </Callout>
             </Marker>
-          ))}
+            );
+          })}
         </MapView>
 
         <View style={styles.filterBar}>
@@ -184,9 +192,12 @@ export default function MapComponent() {
         )}
 
         {/* Pines interactivos */}
-        {visibleIncidents.map((incident) => {
-          const leftPercent = 15 + ((incident.location.longitude * 1000) % 70);
-          const topPercent = 20 + ((incident.location.latitude * 1000) % 60);
+        {visibleIncidents.map((incident, index) => {
+          const offsetLat = (index % 5) * 0.00015;
+          const offsetLng = (index % 3) * 0.00015;
+
+          const leftPercent = 15 + (((incident.location.longitude + offsetLng) * 1000) % 70);
+          const topPercent = 20 + (((incident.location.latitude + offsetLat) * 1000) % 60);
 
           return (
             <Pressable

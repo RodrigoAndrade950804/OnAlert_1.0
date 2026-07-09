@@ -29,44 +29,6 @@ function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function createDemoIncidents(): Incident[] {
-  const now = Date.now();
-  return [
-    {
-      id: 'inc_demo_1',
-      type: 'sospechoso',
-      priority: 'media',
-      status: 'activo',
-      title: 'Persona sospechosa cerca del parque',
-      description: 'Se observa a una persona merodeando cerca del parque central.',
-      reporterId: 'demo_user',
-      reporterName: 'María López',
-      location: { latitude: -0.1807, longitude: -78.4678 },
-      address: 'Parque La Carolina, Quito',
-      createdAt: new Date(now - 3600000).toISOString(),
-      updatedAt: new Date(now - 3600000).toISOString(),
-      isSOS: false,
-      safetyConfirmations: [],
-    },
-    {
-      id: 'inc_demo_2',
-      type: 'robo',
-      priority: 'alta',
-      status: 'validado',
-      title: 'Intento de robo en garaje',
-      description: 'Vecinos reportaron intento de robo en el estacionamiento.',
-      reporterId: 'demo_user2',
-      reporterName: 'Carlos Ruiz',
-      location: { latitude: -0.1825, longitude: -78.4695 },
-      address: 'Urbanización La Colmena',
-      createdAt: new Date(now - 86400000).toISOString(),
-      updatedAt: new Date(now - 82800000).toISOString(),
-      isSOS: false,
-      safetyConfirmations: [],
-    },
-  ];
-}
-
 export async function loadUser(): Promise<User | null> {
   const raw = await AsyncStorage.getItem(STORAGE_KEYS.user);
   return raw ? JSON.parse(raw) : null;
@@ -80,20 +42,6 @@ export async function clearUser(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEYS.user);
 }
 
-export async function loadIncidents(): Promise<Incident[]> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEYS.incidents);
-  if (!raw) {
-    const demo = createDemoIncidents();
-    await AsyncStorage.setItem(STORAGE_KEYS.incidents, JSON.stringify(demo));
-    return demo;
-  }
-  return JSON.parse(raw);
-}
-
-export async function saveIncidents(incidents: Incident[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEYS.incidents, JSON.stringify(incidents));
-}
-
 export async function loadMessages(): Promise<ChatMessage[]> {
   const raw = await AsyncStorage.getItem(STORAGE_KEYS.messages);
   return raw ? JSON.parse(raw) : [];
@@ -101,6 +49,11 @@ export async function loadMessages(): Promise<ChatMessage[]> {
 
 export async function saveMessages(messages: ChatMessage[]): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(messages));
+}
+
+export async function clearOfflineCache(): Promise<void> {
+  await AsyncStorage.removeItem(STORAGE_KEYS.incidents);
+  await AsyncStorage.removeItem(STORAGE_KEYS.messages);
 }
 
 export function buildIncident(

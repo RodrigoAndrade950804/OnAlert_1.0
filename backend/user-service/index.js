@@ -144,6 +144,73 @@ app.delete('/api/auth/user/:id', async (req, res) => {
   }
 });
 
+// Actualizar usuario
+app.put('/api/auth/user/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, email, role } = req.body;
+  try {
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    
+    // Verificar si el nuevo email ya est en uso por otro usuario
+    if (email && email !== user.email) {
+      const existingEmail = await User.findOne({ where: { email } });
+      if (existingEmail) {
+        return res.status(400).json({ error: 'El correo electrónico ya está registrado por otro usuario' });
+      }
+    }
+
+    await user.update({ 
+      name: name || user.name, 
+      email: email || user.email, 
+      role: role || user.role 
+    });
+    
+    res.json({ message: 'Usuario actualizado exitosamente', user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+});
+
+// Validar token y obtener usuario actual
+app.get('/api/auth/me', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token no proporcionado' });
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findByPk(decoded.sub);
+    if (!user) {
+      return res.status(404).json({ error: 'El usuario ya no existe en la base de datos' });
+    }
+    
+    // Obtener la comunidad
+    const userTenant = await UserTenant.findOne({ where: { user_id: user.id } });
+    let communityName = 'Desconocida';
+    if (userTenant) {
+      const tenant = await Tenant.findByPk(userTenant.tenant_id);
+      if (tenant) communityName = tenant.name;
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        community: communityName
+      }
+    });
+  } catch (err) {
+    return res.status(401).json({ error: 'Token inválido o expirado' });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'User Service' });

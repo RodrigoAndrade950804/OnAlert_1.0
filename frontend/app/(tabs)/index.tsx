@@ -60,16 +60,10 @@ export default function HomeScreen() {
         ? 'Emitido localmente en la Red Mesh P2P con Relojes Lógicos.' 
         : 'Registrado en el Gateway y difundido por RabbitMQ.';
 
-      if (Platform.OS === 'web') {
-        window.alert(`¡Alerta SOS enviada!\nLa comunidad ha sido notificada. Mantén la calma.\n\n[Modo: ${modeMsg}]`);
-        router.push(`/incident/${incident.id}`);
-      } else {
-        Alert.alert(
-          '¡Alerta SOS enviada!',
-          `La comunidad ha sido notificada. Mantén la calma.\n\n[Modo: ${modeMsg}]`,
-          [{ text: 'Ver incidente', onPress: () => router.push(`/incident/${incident.id}`) }],
-        );
-      }
+        // Esperamos 1.5s para que el usuario vea el botón verde de ¡ENVIADO! y luego navegamos
+        setTimeout(() => {
+          router.push(`/incident/${incident.id}`);
+        }, 1500);
     } catch (err) {
       console.warn(err);
       if (Platform.OS === 'web') window.alert('Error al emitir SOS');

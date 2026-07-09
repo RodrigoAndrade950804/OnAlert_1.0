@@ -1,4 +1,3 @@
-
 export * from './types';
 export * from './constants/theme';
 export * from './constants/sectors';
@@ -7,5 +6,5 @@ export * from './utils/distance';
 export * from './utils/lamportClock';
 export * from './utils/location';
 export * from './utils/namingService';
-export * from './utils/storage';
 export * from './utils/timeSync';
+export * from './utils/storage';

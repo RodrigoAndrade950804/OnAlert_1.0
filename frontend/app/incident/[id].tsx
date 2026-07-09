@@ -46,7 +46,18 @@ export default function IncidentDetailScreen() {
     (c) => c.userId === user?.id,
   );
 
-  const isManager = user && canManageIncidents(user.role);
+  const isAdmin = user?.role === 'admin';
+  const isUPC = user?.role === 'policia_upc';
+  const canConfirmSafety = isAdmin || user?.id === incident.reporterId;
+
+  const handleEnCamino = () => {
+    updateStatus(incident.id, 'atendido');
+    if (Platform.OS === 'web') {
+      window.alert('¡Alerta de estado enviada! Notificando a los vecinos que vas en camino.');
+    } else {
+      Alert.alert('Recibido', '¡Alerta de estado enviada! Notificando a los vecinos que vas en camino.');
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!chatText.trim()) return;
@@ -109,7 +120,7 @@ export default function IncidentDetailScreen() {
             <Image source={{ uri: incident.imageUri }} style={styles.evidence} />
           )}
 
-          {incident.status === 'activo' && (
+          {incident.status === 'activo' && canConfirmSafety && (
             <Pressable
               style={[styles.safeBtn, hasConfirmedSafety && styles.safeBtnDone]}
               onPress={handleConfirmSafety}
@@ -144,30 +155,27 @@ export default function IncidentDetailScreen() {
             </View>
           )}
 
-          {isManager && incident.status === 'activo' && (
+          {isAdmin && incident.status !== 'cerrado' && (
             <View style={styles.adminActions}>
-              <Pressable
-                style={[styles.adminBtn, { backgroundColor: '#DCFCE7' }]}
-                onPress={() => updateStatus(incident.id, 'validado')}
-              >
-                <Text style={[styles.adminBtnText, { color: colors.success }]}>
-                  Validar
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.adminBtn, { backgroundColor: '#F1F5F9' }]}
-                onPress={() => updateStatus(incident.id, 'rechazado')}
-              >
-                <Text style={[styles.adminBtnText, { color: colors.textSecondary }]}>
-                  Rechazar
-                </Text>
-              </Pressable>
               <Pressable
                 style={[styles.adminBtn, { backgroundColor: '#DBEAFE' }]}
                 onPress={() => updateStatus(incident.id, 'cerrado')}
               >
                 <Text style={[styles.adminBtnText, { color: colors.info }]}>
                   Cerrar caso
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {isUPC && incident.status !== 'cerrado' && (
+            <View style={styles.adminActions}>
+              <Pressable
+                style={[styles.adminBtn, { backgroundColor: '#FEF9C3' }]}
+                onPress={handleEnCamino}
+              >
+                <Text style={[styles.adminBtnText, { color: '#854D0E' }]}>
+                  En camino / Recibido
                 </Text>
               </Pressable>
             </View>

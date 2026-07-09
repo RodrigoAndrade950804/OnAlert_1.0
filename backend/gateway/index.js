@@ -94,7 +94,13 @@ io.on('connection', (socket) => {
   socket.join(socket.user.tenant_id);
 
   socket.on('disconnect', () => {
-    console.log(`🔴 Cliente desconectado: ${socket.user.name}`);
+    console.log(`🔌 Cliente desconectado: ${socket.user.name}`);
+  });
+
+  // Relay de mensajes de chat en tiempo real
+  socket.on('send_chat_message', (msgData) => {
+    // Retransmitir a todos los demás en el mismo tenant
+    socket.to(socket.user.tenant_id).emit('new_chat_message', msgData);
   });
 });
 

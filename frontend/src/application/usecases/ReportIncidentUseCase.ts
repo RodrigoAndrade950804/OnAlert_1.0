@@ -1,7 +1,6 @@
 import { lamportClock } from '@onalert/shared';
 import { timeSync } from '@onalert/shared';
 import {  Coordinates, CreateIncidentInput, Incident, User  } from '@onalert/shared';
-import { saveIncidents, loadIncidents } from '@onalert/shared';
 
 export class ReportIncidentUseCase {
   public static async execute(
@@ -35,14 +34,10 @@ export class ReportIncidentUseCase {
     };
 
     if (isOffline) {
-      console.log('📦 Guardando reporte localmente debido a falta de conexión...');
-      // Cargar incidentes actuales en el storage local
-      const currentLocal = await loadIncidents();
-      const updated = [incident, ...currentLocal];
-      await saveIncidents(updated);
-      return incident;
+      console.log('No se puede crear el reporte sin conexión. La nube es requerida.');
+      throw new Error('Debes tener conexión a Internet para crear un reporte.');
     } else {
-      console.log('🌐 Enviando reporte a la Nube...');
+      console.log('📡 Enviando reporte a la Nube...');
       try {
         const response = await fetch(`${apiGatewayUrl}/api/incidents`, {
           method: 'POST',
@@ -74,11 +69,8 @@ export class ReportIncidentUseCase {
           id: data._id || incident.id
         };
       } catch (err) {
-        console.warn('❌ Falló conexión al enviar reporte. Almacenando en cache local.');
-        const currentLocal = await loadIncidents();
-        const updated = [incident, ...currentLocal];
-        await saveIncidents(updated);
-        return incident;
+        console.warn('❌ Falló conexión al enviar reporte. Modo offline desactivado.');
+        throw new Error('No se pudo enviar el reporte. Verifica tu conexión.');
       }
     }
   }

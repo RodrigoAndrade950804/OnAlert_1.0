@@ -1,26 +1,38 @@
 import { useRouter } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View, Alert, Platform } from 'react-native';
 import { IncidentCard } from '@/src/presentation/components/IncidentCard';
 import { useAlerts } from '@/src/application/context/AlertContext';
 import {  colors  } from '@onalert/shared';
 
 export default function UPCScreen() {
   const router = useRouter();
-  const { incidents, updateStatus, user } = useAlerts();
+  const { incidents, updateStatus, sendMessage, user } = useAlerts();
 
-  // El UPC solo ve incidentes activos en su sector, o todos si es global
-  const sectorIncidents = incidents.filter(i => user?.community === 'Global' || i.address?.includes(user?.community || ''));
+  // Todos los incidentes descargados ya pertenecen a la comunidad del UPC gracias al backend (tenant_id)
+  const sectorIncidents = incidents;
   const pending = sectorIncidents.filter((i) => i.status === 'activo');
   const managed = sectorIncidents.filter(
-    (i) => i.status === 'validado' || i.status === 'rechazado' || i.status === 'cerrado',
+    (i) => i.status === 'validado' || i.status === 'rechazado' || i.status === 'cerrado' || i.status === 'atendido',
   );
+
+  const criticalCount = pending.filter(i => i.priority === 'alta').length;
+
+  const handleEnCamino = (id: string) => {
+    updateStatus(id, 'atendido');
+    sendMessage(id, '👮‍♂️ Unidad UPC ha recibido la alerta y va en camino. Mantenga la calma.');
+    if (Platform.OS === 'web') {
+      window.alert('¡Alerta de estado enviada! Notificando a los vecinos que vas en camino.');
+    } else {
+      Alert.alert('Recibido', '¡Alerta de estado enviada! Notificando a los vecinos que vas en camino.');
+    }
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.summary}>
         <Text style={styles.summaryTitle}>Central UPC: {user?.community}</Text>
         <Text style={styles.summaryText}>
-          {pending.length} incidentes críticos requieren atención
+          {criticalCount} incidentes críticos requieren atención
         </Text>
       </View>
 
@@ -51,24 +63,17 @@ export default function UPCScreen() {
                 address={item.address}
               />
             </Pressable>
+            {item.priority === 'alta' && (
+              <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: 'bold', marginLeft: 4 }}>
+                ⚠️ INCIDENTE CRÍTICO
+              </Text>
+            )}
             <View style={styles.actions}>
               <Pressable
-                style={[styles.actionBtn, styles.validateBtn]}
-                onPress={() => updateStatus(item.id, 'validado')}
+                style={[styles.actionBtn, { backgroundColor: '#FEF9C3' }]}
+                onPress={() => handleEnCamino(item.id)}
               >
-                <Text style={styles.validateText}>Atender</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.actionBtn, styles.rejectBtn]}
-                onPress={() => updateStatus(item.id, 'rechazado')}
-              >
-                <Text style={styles.rejectText}>Falsa Alarma</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.actionBtn, styles.closeBtn]}
-                onPress={() => updateStatus(item.id, 'cerrado')}
-              >
-                <Text style={styles.closeText}>Finalizar</Text>
+                <Text style={{ color: '#854D0E', fontWeight: 'bold', fontSize: 13 }}>En camino / Recibido</Text>
               </Pressable>
             </View>
           </View>

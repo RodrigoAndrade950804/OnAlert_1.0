@@ -25,6 +25,12 @@ export class UserService {
     await this.saveUsers(users);
   }
 
+  static async updateUser(userId: string, data: Partial<User>): Promise<void> {
+    let users = await this.getAllUsers();
+    users = users.map((u) => (u.id === userId ? { ...u, ...data } : u));
+    await this.saveUsers(users);
+  }
+
   static async getUsersByRole(role: UserRole): Promise<User[]> {
     const users = await this.getAllUsers();
     return users.filter((u) => u.role === role);

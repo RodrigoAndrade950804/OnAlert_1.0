@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from 'react';
 import { 
   ChatMessage,
@@ -18,10 +19,9 @@ import {
   addChatMessage,
   addSafetyConfirmation,
   clearUser,
-  loadIncidents,
+  clearOfflineCache,
   loadMessages,
   loadUser,
-  saveIncidents,
   saveMessages,
   saveUser,
   updateIncidentStatus,
@@ -56,6 +56,7 @@ interface AlertContextValue {
   sendMessage: (incidentId: string, text: string) => Promise<void>;
   updateStatus: (incidentId: string, status: IncidentStatus) => Promise<void>;
   refreshData: () => Promise<void>;
+  deleteIncident: (incidentId: string) => Promise<void>;
 }
 
 const AlertContext = createContext<AlertContextValue | null>(null);
@@ -66,6 +67,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const socketRef = useRef<any>(null);
 
   // Suscripción al GPS en tiempo real para rastreo continuo (Pág. 14 del PDF)
   useEffect(() => {
@@ -102,20 +104,51 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   const [isOffline, setIsOffline] = useState(false);
   const [jwtToken, setJwtToken] = useState<string | null>(null);
 
+  const logout = useCallback(async () => {
+    await clearUser();
+    setUser(null);
+    setJwtToken(null);
+  }, []);
+
   const refreshData = useCallback(async () => {
-    // Si estamos online, intentar obtener incidentes del servidor
-    if (!isOffline && jwtToken) {
+    // 1. Obtener sesión local (solo el token y usuario base)
+    const storedUser = await loadUser();
+    const storedMessages = await loadMessages();
+    setMessages(storedMessages);
+    
+    // Si no hay token en el estado, intentamos sacarlo de algún lado (AuthService ya lo maneja pero aseguramos)
+    let currentToken = jwtToken;
+    if (!currentToken && storedUser) {
+       // El token se guarda en AuthService, lo manejaremos ahí, por ahora usamos el jwtToken de estado
+    }
+
+    if (storedUser && currentToken) {
+      // 2. Validar Token contra BDD
+      try {
+        const urlMe = `${API_GATEWAY_URL}/api/auth/me`;
+        const resMe = await fetch(urlMe, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+        if (!resMe.ok) {
+          // Si el usuario fue borrado o token expiró, lo sacamos
+          await logout();
+          return;
+        }
+        const dataMe = await resMe.json();
+        setUser(dataMe.user);
+      } catch (err) {
+        console.warn('Error validando token, modo offline asumido o backend caído.');
+        setUser(storedUser); // Fallback si no hay red
+      }
+    } else {
+      setUser(storedUser);
+    }
+
+    // 3. Cargar incidentes SOLO DE LA NUBE
+    if (!isOffline && currentToken) {
       try {
         const url = `${API_GATEWAY_URL}/api/incidents`;
-          
-        const response = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${jwtToken}`
-          }
-        });
+        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${currentToken}` } });
         if (response.ok) {
           const cloudIncidents = await response.json();
-          // Mapear de MongoDB a la interfaz local
           const mapped = cloudIncidents.map((inc: any) => ({
             id: inc._id,
             type: inc.type,
@@ -135,24 +168,15 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
             safetyConfirmations: inc.safetyConfirmations || []
           }));
           setIncidents(mapped);
-          await saveIncidents(mapped);
-          return;
         }
       } catch (err) {
-        console.warn('⚠️ Falló al conectar con la Nube para refrescar datos. Usando caché local.');
+        console.warn('Falló al conectar con la Nube para refrescar incidentes.');
+        setIncidents([]); // CERO CACHÉ LOCAL
       }
+    } else {
+      setIncidents([]); // CERO CACHÉ LOCAL EN MODO OFFLINE
     }
-
-    // Fallback a localStorage local
-    const [storedUser, storedIncidents, storedMessages] = await Promise.all([
-      loadUser(),
-      loadIncidents(),
-      loadMessages(),
-    ]);
-    setUser(storedUser);
-    setIncidents(storedIncidents);
-    setMessages(storedMessages);
-  }, [isOffline, jwtToken]);
+  }, [isOffline, jwtToken, logout]);
 
   // Inicializar P2P Node cuando el usuario ingresa
   useEffect(() => {
@@ -193,13 +217,26 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
         refreshData();
       });
 
+      socket.on('new_chat_message', (msg: ChatMessage) => {
+        setMessages(prev => {
+          // Avoid duplicates
+          if (prev.find(m => m.id === msg.id)) return prev;
+          const updated = [...prev, msg];
+          saveMessages(updated).catch(console.error);
+          return updated;
+        });
+      });
+
       socket.on('disconnect', () => {
         console.log('⚠️ Desconectado del Gateway WebSockets');
       });
+      
+      socketRef.current = socket;
     }
 
     return () => {
       if (socket) socket.disconnect();
+      socketRef.current = null;
     };
   }, [isOffline, jwtToken, refreshData]);
 
@@ -217,12 +254,6 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const logout = useCallback(async () => {
-    await clearUser();
-    setUser(null);
-    setJwtToken(null);
-  }, []);
-
   // Enviar reporte de incidente normal (HU-02)
   const createIncident = useCallback(
     async (input: CreateIncidentInput) => {
@@ -239,7 +270,6 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       // Actualizar UI
       setIncidents(prev => {
         const updated = [newIncident, ...prev];
-        saveIncidents(updated).catch(console.error);
         return updated;
       });
       return newIncident;
@@ -263,7 +293,6 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
 
       setIncidents(prev => {
         const updated = [sosIncident, ...prev];
-        saveIncidents(updated).catch(console.error);
         return updated;
       });
       return sosIncident;
@@ -293,7 +322,6 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
 
       // Sincronizar en UI local
       const updated = addSafetyConfirmation(incidents, incidentId, user);
-      await saveIncidents(updated);
       setIncidents(updated);
     },
     [user, incidents, isOffline, jwtToken],
@@ -302,9 +330,15 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   const sendMessage = useCallback(
     async (incidentId: string, text: string) => {
       if (!user || !text.trim()) return;
-      const updated = addChatMessage(messages, incidentId, user, text.trim());
-      await saveMessages(updated);
-      setMessages(updated);
+      const updatedList = addChatMessage(messages, incidentId, user, text.trim());
+      const newMessage = updatedList[updatedList.length - 1]; // El mensaje recién creado
+      await saveMessages(updatedList);
+      setMessages(updatedList);
+
+      // Emitir mensaje por WebSockets en tiempo real
+      if (socketRef.current) {
+        socketRef.current.emit('send_chat_message', newMessage);
+      }
     },
     [user, messages],
   );
@@ -327,10 +361,33 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       }
 
       const updated = updateIncidentStatus(incidents, incidentId, status);
-      await saveIncidents(updated);
       setIncidents(updated);
     },
     [incidents, isOffline, jwtToken],
+  );
+
+  const deleteIncident = useCallback(
+    async (incidentId: string) => {
+      if (!isOffline && jwtToken) {
+        try {
+          await fetch(`${API_GATEWAY_URL}/api/incidents/${incidentId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${jwtToken}`
+            }
+          });
+        } catch (err) {
+          console.warn('⚠️ Falló al eliminar en la nube.');
+        }
+      }
+
+      // Eliminar de caché local
+      setIncidents((prev) => {
+        const updated = prev.filter(i => i.id !== incidentId);
+        return updated;
+      });
+    },
+    [isOffline, jwtToken],
   );
 
   const value = useMemo(
@@ -352,6 +409,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       sendMessage,
       updateStatus,
       refreshData,
+      deleteIncident,
     }),
     [
       user,
@@ -370,6 +428,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       sendMessage,
       updateStatus,
       refreshData,
+      deleteIncident,
     ],
   );
 

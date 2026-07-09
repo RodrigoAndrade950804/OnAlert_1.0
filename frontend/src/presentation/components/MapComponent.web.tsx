@@ -95,9 +95,13 @@ export default function MapComponent() {
             </Marker>
           )}
 
-          {visibleIncidents.map((incident) => {
+          {visibleIncidents.map((incident, index) => {
             if (!incident.location) return null;
             
+            // Offset visual milimétrico para evitar que pines idénticos se sobrepongan por completo
+            const offsetLat = (index % 5) * 0.00015;
+            const offsetLng = (index % 3) * 0.00015;
+
             // Leaflet Icon personalizado por prioridad/tipo
             const color = incident.priority === 'alta' ? '#EF4444' : incident.priority === 'media' ? '#F59E0B' : '#3B82F6';
             const markerHtml = `
@@ -117,7 +121,7 @@ export default function MapComponent() {
             return (
               <Marker 
                 key={incident.id}
-                position={[incident.location.latitude, incident.location.longitude]}
+                position={[incident.location.latitude + offsetLat, incident.location.longitude + offsetLng]}
                 icon={customIcon}
                 eventHandlers={{
                   click: () => {
