@@ -25,6 +25,8 @@ interface StatusBadgeProps {
 export function StatusBadge({ status }: StatusBadgeProps) {
   const colorMap: Record<IncidentStatus, string> = {
     activo: colors.alta,
+    en_progreso: colors.media,
+    atendido: colors.success,
     validado: colors.success,
     rechazado: colors.textSecondary,
     cerrado: colors.info,
@@ -32,6 +34,8 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   const labelMap: Record<IncidentStatus, string> = {
     activo: 'Activo',
+    en_progreso: 'En Progreso',
+    atendido: 'Atendido',
     validado: 'Validado',
     rechazado: 'Rechazado',
     cerrado: 'Cerrado',

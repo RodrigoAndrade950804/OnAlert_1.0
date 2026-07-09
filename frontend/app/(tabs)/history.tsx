@@ -84,7 +84,7 @@ export default function HistoryScreen() {
                   onPress={() => setStatusFilter(f)}
                 >
                   <Text style={[styles.tabText, statusFilter === f && styles.tabTextActive]}>
-                    {f.toUpperCase()}
+                    {f.replace('_', ' ').toUpperCase()}
                   </Text>
                 </Pressable>
               ))}

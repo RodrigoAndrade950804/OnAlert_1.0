@@ -123,6 +123,7 @@ export function addSafetyConfirmation(
     if (inc.safetyConfirmations.some((c) => c.userId === user.id)) return inc;
     return {
       ...inc,
+      status: inc.reporterId === user.id ? 'cerrado' : inc.status,
       safetyConfirmations: [
         ...inc.safetyConfirmations,
         {

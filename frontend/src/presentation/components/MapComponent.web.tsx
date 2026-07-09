@@ -61,6 +61,9 @@ export default function MapComponent() {
       if (user?.community !== 'Global' && i.address && !i.address.includes(user?.community || '')) {
         return false;
       }
+      if (i.status === 'cerrado') {
+        return false;
+      }
       return filter === 'todos' ? true : i.type === filter;
     });
   }, [incidents, filter, user]);

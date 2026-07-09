@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./src/config/db');
-const { connectRabbitMQ } = require('./rabbitmq');
+const { connectRabbitMQ } = require('./src/events/publisher');
 const incidentRoutes = require('./src/routes/incidentRoutes');
 
 const app = express();
