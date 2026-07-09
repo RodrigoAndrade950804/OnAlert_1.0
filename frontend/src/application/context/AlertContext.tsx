@@ -219,7 +219,10 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       
       socket = io(API_GATEWAY_URL, {
         auth: { token: jwtToken },
-        transports: ['websocket', 'polling'] // Try WS first, fallback to polling
+        transports: ['polling', 'websocket'], // Obligatorio polling primero para enviar headers extra
+        extraHeaders: {
+          'ngrok-skip-browser-warning': 'true'
+        }
       });
 
       socket.on('connect', () => {
