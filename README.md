@@ -1,77 +1,159 @@
-# 🚨 OnAlert - Sistema Distribuido de Alertas Comunitarias
+# OnAlert - Sistema de Alertas Comunitarias 🚨
 
-OnAlert es una plataforma distribuida híbrida (Cloud + P2P Mesh + Edge Computing) diseñada para la gestión inmediata de situaciones de emergencia y coordinación vecinal en tiempo real. 
-
-Este repositorio integra la aplicación móvil desarrollada en **React Native / Expo** y una infraestructura de microservicios robusta en la nube.
+OnAlert es una plataforma integral (Frontend Web/Móvil y Backend de Microservicios) diseñada para gestionar incidentes de seguridad y emergencias vecinales (SOS). Soporta arquitectura multi-inquilino (múltiples comunidades) y características avanzadas como WebSockets para chat en tiempo real y arquitectura de red híbrida (Nube/P2P Mesh).
 
 ---
 
-## 📂 Archivos del Proyecto (Limpieza de Boilerplate)
+## 🚀 Arquitectura del Proyecto
 
-Se ha realizado una limpieza del código eliminando archivos de plantilla innecesarios (como `App.tsx` y `CLAUDE.md`, ya que Expo Router utiliza `app/index.tsx` de forma nativa). Los archivos principales de la arquitectura distribuida son:
+El proyecto está dividido en tres componentes principales:
 
-*   `backend/`: Infraestructura de servidores y bases de datos en contenedores.
-*   `services/p2pNode.ts`: Gestor local de la red Mesh descentralizada y consensos lógicos.
-*   `application/usecases/`: Casos de uso de arquitectura limpia (`ActivateEmergencyButton`, `ReportIncident`, `SyncOfflineData`).
-*   `utils/lamportClock.ts` & `timeSync.ts`: Sincronización lógica de eventos (Lamport) y marcas de tiempo duales (NTP).
-*   `utils/namingService.ts`: Servicio de nombres jerárquico tipo DNS y lógica de enrutamiento DHT.
-
----
-
-## 🗄️ Guía Paso a Paso para la Creación de la Base de Datos
-
-Una de las grandes ventajas de esta arquitectura es que **la base de datos se crea de forma completamente automática**. No necesitas instalar PostgreSQL o MongoDB localmente en tu sistema operativo, ni ejecutar scripts manuales SQL para estructurar tablas. **Docker y Sequelize se encargan de todo.**
-
-### Requisitos Previos:
-1.  **Node.js** (versión 18 o superior).
-2.  **Docker Desktop** (esencial para levantar las bases de datos y colas en contenedores).
+1. **`shared/`**: Paquete NPM local que contiene modelos, tipos de TypeScript y lógica compartida (relojes lógicos de Lamport, algoritmos de sincronización de tiempo, P2P).
+2. **`backend/`**: Arquitectura orientada a microservicios:
+   - **API Gateway** (Puerto 8000): Enrutamiento general y WebSockets.
+   - **User Service** (Puerto 8001): Gestión de usuarios, autenticación (JWT) y Tenant. Base de datos: **PostgreSQL**.
+   - **Incident Service** (Puerto 8002): Gestión de incidentes (Geoespacial). Base de datos: **MongoDB**.
+   - **Alert Service** (Puerto 8003): Historial y procesamiento de notificaciones.
+   - **RabbitMQ**: (Puerto 5672) Broker de mensajería para comunicación asíncrona entre microservicios.
+3. **`frontend/`**: Aplicación multiplataforma construida con **Expo (React Native)**. Funciona en Web, Android e iOS.
 
 ---
 
-### Paso 1: Levantar las Bases de Datos y RabbitMQ (Docker)
-1.  Asegúrate de que **Docker Desktop** esté abierto y ejecutándose en segundo plano.
-2.  Abre una terminal en tu computadora y navega a la carpeta del backend:
-    ```bash
-    cd c:\Users\Asus\Downloads\OnAlert\backend
-    ```
-3.  Ejecuta el siguiente comando para descargar y levantar PostgreSQL, MongoDB y RabbitMQ automáticamente:
-    ```bash
-    docker-compose up -d
-    ```
-    *Esto descargará las imágenes de base de datos necesarias y las ejecutará de forma aislada exponiendo los puertos requeridos (`5432` para Postgres, `27017` para Mongo y `5672` para RabbitMQ).*
+## 📋 Requisitos Previos
+
+Para ejecutar este proyecto en tu entorno de desarrollo, asegúrate de tener instaladas las siguientes herramientas:
+
+1. **[Node.js](https://nodejs.org/)** (Versión 18 o superior)
+2. **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (Requerido para levantar las bases de datos y el servidor de mensajería de forma automática)
+
+> **Nota para Windows**: Asegúrate de que Docker Desktop esté corriendo y que WSL2 (Windows Subsystem for Linux) esté habilitado en tu sistema.
 
 ---
 
-### Paso 2: Creación Automática del Esquema de Datos (Auto-Migración)
-Al iniciar los microservicios, el ORM **Sequelize** y la librería **Mongoose** detectarán las bases de datos vacías y estructurarán automáticamente el esquema:
-1.  En la misma terminal dentro de `backend/`, ejecuta el script concurrente para levantar todos los microservicios:
-    ```bash
-    npm run start
-    ```
-2.  Durante el arranque, verás los siguientes registros en tu consola:
-    *   `✅ Base de datos PostgreSQL sincronizada`: **Sequelize** creó automáticamente las tablas `users`, `tenants` y `user_tenants` en PostgreSQL.
-    *   `✅ Conectado a MongoDB`: **Mongoose** se conectó a MongoDB y aplicó el índice geoespacial de alto rendimiento `2dsphere` sobre la ubicación del mapa.
-    *   `✅ Conectado a RabbitMQ - Exchange listo`: El broker de mensajería asíncrona está listo para encolar alertas.
+## 🛠️ Instalación y Configuración Paso a Paso
+
+Sigue estos pasos estrictamente en este orden para levantar el proyecto sin errores.
+
+### Paso 1: Levantar Infraestructura con Docker (Bases de datos y RabbitMQ)
+
+El proyecto incluye un archivo `docker-compose.yml` ya configurado dentro de la carpeta `backend` que levantará **PostgreSQL**, **MongoDB** y **RabbitMQ** automáticamente con los puertos y credenciales correctos.
+
+1. Abre una terminal.
+2. Navega a la carpeta del backend:
+   ```bash
+   cd backend
+   ```
+3. Ejecuta el comando para iniciar los contenedores en segundo plano:
+   ```bash
+   docker-compose up -d
+   ```
+4. Espera un par de minutos a que Docker descargue las imágenes e inicie los contenedores.
+   > *Esto levantará PostgreSQL en el puerto `5433`, MongoDB en `27017` y RabbitMQ en `5672`.*
 
 ---
 
-## 📱 Ejecución de la Aplicación Móvil (Expo)
+### Paso 2: Compilar el Módulo Compartido (`shared`)
 
-Una vez que el backend está corriendo en los puertos locales:
+El frontend y el backend dependen de código compartido (tipos, utilidades de red, relojes lógicos). **Si omites este paso, tanto el frontend como el backend fallarán al arrancar.**
 
-1.  Abre otra ventana de terminal en la raíz del proyecto (`c:\Users\Asus\Downloads\OnAlert`).
-2.  Inicia el servidor Metro Bundler de Expo:
-    ```bash
-    npm run start
-    ```
-3.  **Probar en Web (Navegador):** Presiona `w` en tu consola. Se abrirá `http://localhost:8081` con una simulación interactiva completa de mapas y del botón SOS lista para depurar.
-4.  **Probar en Celular (Expo Go):** Escanea el código QR desde la app Expo Go (Android) o la cámara (iOS). Asegúrate de que tu celular y tu PC estén en la misma red Wi-Fi.
+1. Abre una terminal en la raíz del proyecto.
+2. Navega a la carpeta `shared`:
+   ```bash
+   cd shared
+   ```
+3. Instala las dependencias y compila el código:
+   ```bash
+   npm install
+   npm run build
+   ```
+4. Vuelve a la carpeta raíz del proyecto:
+   ```bash
+   cd ..
+   ```
 
 ---
 
-## 🧪 Demostración de Conceptos Distribuidos ante Profesores
+### Paso 3: Instalar y Levantar el Backend (Microservicios)
 
-Usa el botón de conmutación de red en el header de la app (**"En Nube" / "Mesh P2P"**) para probar:
-*   **Modo Online ("En Nube"):** Las alertas se registran inmediatamente en MongoDB mediante el API Gateway. Puedes abrir los logs del contenedor de RabbitMQ (`http://localhost:15672` con credenciales `onalert_guest`/`guest_password`) para mostrar cómo se encolan y procesan las notificaciones asíncronamente en background.
-*   **Modo Offline ("Mesh P2P"):** Las alertas se guardan en el storage del dispositivo firmadas con el **Reloj Lógico de Lamport** actual. Si simulas al menos 3 nodos conectados localmente, el Super Peer (Guardia) ejecutará el algoritmo de **Consenso Cruzado** para validar el evento de forma descentralizada.
-*   **Sincronización:** Al volver a presionar el botón a **"En Nube"**, el dispositivo enviará automáticamente los reportes acumulados offline resolviendo el orden causal del historial.
+El backend utiliza la herramienta `concurrently` para ejecutar todos los microservicios (Gateway, User, Incident, Alert) a la vez desde un solo comando.
+
+1. Abre una terminal en la carpeta `backend`:
+   ```bash
+   cd backend
+   ```
+2. Instala las dependencias globales del backend:
+   ```bash
+   npm install
+   ```
+3. Inicia todos los microservicios:
+   ```bash
+   npm start
+   ```
+4. En tu consola deberías ver registros (logs) confirmando que cada servicio se ha conectado correctamente a PostgreSQL, MongoDB y RabbitMQ.
+   > **Nota**: No cierres esta terminal. El backend debe seguir corriendo.
+
+---
+
+### Paso 4: Instalar y Levantar el Frontend (Expo)
+
+Finalmente, levanta la interfaz gráfica. Puedes usar tu navegador web o la app Expo Go en tu dispositivo móvil.
+
+1. Abre una **nueva ventana** de terminal y navega a la carpeta `frontend`:
+   ```bash
+   cd frontend
+   ```
+2. Instala las dependencias del frontend:
+   ```bash
+   npm install
+   ```
+3. Levanta la aplicación:
+   - **Para usar la aplicación en el Navegador Web (Recomendado para pruebas rápidas)**:
+     ```bash
+     npm run web
+     ```
+     La app se abrirá automáticamente en `http://localhost:8081`.
+     
+   - **Para probar en el Celular**:
+     ```bash
+     npx expo start
+     ```
+     Descarga la app "Expo Go" en tu teléfono (iOS o Android) y escanea el código QR que aparece en la consola. 
+
+---
+
+## 👤 ¿Cómo empezar a usar la plataforma?
+
+Una vez que tengas la aplicación web abierta en tu pantalla, sigue este flujo básico para entender cómo funciona la plataforma:
+
+1. **Crear una Comunidad y un Usuario**:
+   - Haz clic en "Registrarse".
+   - Rellena los datos. Cuando escribas el nombre de la "Comunidad" (por ejemplo: `MiBarrio`), el sistema creará automáticamente un Inquilino (Tenant) para aislar los datos.
+   - Selecciona el rol `vecino`.
+
+2. **Tipos de Roles**:
+   - **Vecino (`vecino`)**: Inicia sesión en la app, puede reportar incidentes, emitir alertas SOS instantáneas (Nube o Red Mesh P2P si está sin conexión), y chatear con los involucrados.
+   - **Administrador Local (`admin`)**: Tiene un panel de control para ver las métricas de su comunidad, gestionar (aprobar/cerrar) incidentes y administrar a los vecinos de su Tenant.
+   - **Policía / UPC (`policia_upc`)**: Interfaz exclusiva para autoridades. Pueden aceptar casos, marcar que están "En Camino" y comunicarse directamente por el chat del incidente.
+   > *Nota: Para obtener los roles `admin` o `policia_upc`, puedes registrar nuevos usuarios en la interfaz y luego actualizar su rol directamente en la base de datos PostgreSQL, en la tabla `users`.*
+
+3. **Demostración de Emergencia (SOS)**:
+   - Inicia sesión como **Vecino**.
+   - Presiona el botón rojo grande de **BOTÓN DE EMERGENCIA (SOS)**.
+   - La alerta se despachará en tiempo real al servidor y entrarás a la sala del incidente.
+   - Abre **otra pestaña o ventana de incógnito** e inicia sesión con una cuenta que tenga rol de **UPC**.
+   - En el panel de la UPC, verás la alerta sonar y titilar en rojo. Haz clic en ella.
+   - Presiona el botón amarillo **"En camino / Recibido"**.
+   - Vuelve a la pantalla del **Vecino**. Verás cómo el estado cambió a "En progreso" y un mensaje automático de la policía aparecerá en el Chat de Emergencia.
+
+---
+
+## 🏗️ Patrones y Tecnologías Principales
+
+- **Arquitectura Microservicios**: Backend escalable separado por dominios (Users, Incidents, Alerts).
+- **Multitenancy**: Aislamiento lógico de datos para que la Comunidad A no vea los incidentes de la Comunidad B.
+- **Event-Driven (RabbitMQ)**: Comunicación asíncrona robusta.
+- **Relojes Lógicos de Lamport**: Empleados para mantener el orden cronológico de eventos incluso en entornos desconectados (Mesh P2P).
+- **WebSockets (Socket.io)**: Comunicación en tiempo real (Chat y Notificaciones push) con actualizaciones dinámicas del UI (Zero-refresh).
+
+---
+*Hecho con ❤️ para la seguridad de todos los vecindarios.*
