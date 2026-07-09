@@ -1,0 +1,12 @@
+{
+  "name": "onalert-backend",
+  "version": "1.0.0",
+  "description": "Backend microservices for OnAlert",
+  "scripts": {
+    "install-all": "npm install && npm install --prefix gateway && npm install --prefix user-service && npm install --prefix incident-service && npm install --prefix alert-service",
+    "start": "concurrently \"npm run start --prefix gateway\" \"npm run start --prefix user-service\" \"npm run start --prefix incident-service\" \"npm run start --prefix alert-service\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
