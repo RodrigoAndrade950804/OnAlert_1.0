@@ -1,6 +1,6 @@
 import {  User  } from '@onalert/shared';
 import { getApiGatewayUrl } from '@onalert/shared';
-import { saveUser } from '@onalert/shared';
+import { saveUser, saveToken } from '@onalert/shared';
 import { UserService } from './UserService';
 
 export class AuthService {
@@ -39,6 +39,9 @@ export class AuthService {
           community: authData.user.community
         };
         await saveUser(authenticatedUser);
+        if (authData.token) {
+          await saveToken(authData.token);
+        }
         console.log('✅ Login exitoso en la nube. Token JWT guardado.');
         return { user: authenticatedUser, token: authData.token, isOffline: false };
       } else {

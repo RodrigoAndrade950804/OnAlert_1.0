@@ -50,8 +50,9 @@ export default function IncidentDetailScreen() {
   const isUPC = user?.role === 'policia_upc';
   const canConfirmSafety = isAdmin || user?.id === incident.reporterId;
 
-  const handleEnCamino = () => {
-    updateStatus(incident.id, 'atendido');
+  const handleEnCamino = async () => {
+    updateStatus(incident.id, 'en_progreso');
+    await sendMessage(incident.id, '👮‍♂️ Unidad UPC ha recibido la alerta y va en camino. Mantenga la calma.');
     if (Platform.OS === 'web') {
       window.alert('¡Alerta de estado enviada! Notificando a los vecinos que vas en camino.');
     } else {

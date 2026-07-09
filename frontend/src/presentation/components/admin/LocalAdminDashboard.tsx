@@ -248,9 +248,9 @@ export function LocalAdminDashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { padding: 20, backgroundColor: colors.primary },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: '800' },
-  headerSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 14, marginTop: 4 },
+  header: { padding: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  headerTitle: { color: colors.text, fontSize: 20, fontWeight: '800' },
+  headerSubtitle: { color: colors.textSecondary, fontSize: 14, marginTop: 4 },
   content: { padding: 16 },
   formCard: { backgroundColor: colors.surface, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 20 },
   formTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 16 },

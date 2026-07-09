@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function HistoryScreen() {
   const router = useRouter();
   const { incidents, user, deleteIncident } = useAlerts();
-  const [statusFilter, setStatusFilter] = useState<'todos' | 'activo' | 'cerrado'>('todos');
+  const [statusFilter, setStatusFilter] = useState<'todos' | 'activo' | 'en_progreso' | 'cerrado'>('todos');
 
   const stats = useMemo(() => {
     const total = incidents.length;
@@ -25,7 +25,9 @@ export default function HistoryScreen() {
   const sorted = useMemo(() => {
     let filtered = [...incidents];
     if (statusFilter === 'activo') {
-      filtered = filtered.filter(i => i.status !== 'cerrado' && i.status !== 'falsa_alarma');
+      filtered = filtered.filter(i => i.status === 'activo');
+    } else if (statusFilter === 'en_progreso') {
+      filtered = filtered.filter(i => i.status === 'en_progreso');
     } else if (statusFilter === 'cerrado') {
       filtered = filtered.filter(i => i.status === 'cerrado');
     }
@@ -75,7 +77,7 @@ export default function HistoryScreen() {
           <View>
             <Text style={styles.sectionTitle}>Historial de incidentes</Text>
             <View style={styles.filterTabs}>
-              {(['todos', 'activo', 'cerrado'] as const).map(f => (
+              {(['todos', 'activo', 'en_progreso', 'cerrado'] as const).map(f => (
                 <Pressable 
                   key={f} 
                   style={[styles.tab, statusFilter === f && styles.tabActive]}

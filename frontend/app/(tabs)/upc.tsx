@@ -11,15 +11,16 @@ export default function UPCScreen() {
   // Todos los incidentes descargados ya pertenecen a la comunidad del UPC gracias al backend (tenant_id)
   const sectorIncidents = incidents;
   const pending = sectorIncidents.filter((i) => i.status === 'activo');
+  const inProgress = sectorIncidents.filter((i) => i.status === 'en_progreso' || i.status === 'atendido');
   const managed = sectorIncidents.filter(
-    (i) => i.status === 'validado' || i.status === 'rechazado' || i.status === 'cerrado' || i.status === 'atendido',
+    (i) => i.status === 'validado' || i.status === 'rechazado' || i.status === 'cerrado',
   );
 
   const criticalCount = pending.filter(i => i.priority === 'alta').length;
 
-  const handleEnCamino = (id: string) => {
-    updateStatus(id, 'atendido');
-    sendMessage(id, '👮‍♂️ Unidad UPC ha recibido la alerta y va en camino. Mantenga la calma.');
+  const handleEnCamino = async (id: string) => {
+    updateStatus(id, 'en_progreso');
+    await sendMessage(id, '👮‍♂️ Unidad UPC ha recibido la alerta y va en camino. Mantenga la calma.');
     if (Platform.OS === 'web') {
       window.alert('¡Alerta de estado enviada! Notificando a los vecinos que vas en camino.');
     } else {
@@ -80,29 +81,54 @@ export default function UPCScreen() {
         )}
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         ListFooterComponent={
-          managed.length > 0 ? (
-            <View style={styles.footer}>
-              <Text style={styles.sectionTitle}>Patrullados recientemente</Text>
-              {managed.slice(0, 5).map((item) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() => router.push(`/incident/${item.id}`)}
-                  style={{ marginBottom: 12 }}
-                >
-                  <IncidentCard
-                    title={item.title}
-                    type={item.type}
-                    priority={item.priority}
-                    status={item.status}
-                    description={item.description}
-                    time={new Date(item.createdAt).toLocaleString('es-EC')}
-                    reporterName={item.reporterName}
-                    address={item.address}
-                  />
-                </Pressable>
-              ))}
-            </View>
-          ) : null
+          <>
+            {inProgress.length > 0 && (
+              <View style={styles.footer}>
+                <Text style={styles.sectionTitle}>En Progreso / En camino</Text>
+                {inProgress.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => router.push(`/incident/${item.id}`)}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <IncidentCard
+                      title={item.title}
+                      type={item.type}
+                      priority={item.priority}
+                      status={item.status}
+                      description={item.description}
+                      time={new Date(item.createdAt).toLocaleString('es-EC')}
+                      reporterName={item.reporterName}
+                      address={item.address}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {managed.length > 0 && (
+              <View style={styles.footer}>
+                <Text style={styles.sectionTitle}>Patrullados recientemente</Text>
+                {managed.slice(0, 5).map((item) => (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => router.push(`/incident/${item.id}`)}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <IncidentCard
+                      title={item.title}
+                      type={item.type}
+                      priority={item.priority}
+                      status={item.status}
+                      description={item.description}
+                      time={new Date(item.createdAt).toLocaleString('es-EC')}
+                      reporterName={item.reporterName}
+                      address={item.address}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </>
         }
       />
     </View>

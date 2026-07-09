@@ -41,8 +41,9 @@ export default function HomeScreen() {
   }, [userLocation]);
 
   const activeCount = incidents.filter((i) => i.status === 'activo').length;
+  const inProgressCount = incidents.filter((i) => i.status === 'en_progreso').length;
   const highPriority = incidents.filter(
-    (i) => i.priority === 'alta' && i.status === 'activo',
+    (i) => i.priority === 'alta' && (i.status === 'activo' || i.status === 'en_progreso'),
   ).length;
 
   const handleSOS = async () => {
@@ -86,9 +87,6 @@ export default function HomeScreen() {
             <Ionicons name={isOffline ? "wifi" : "cloud-done"} size={16} color="#fff" />
             <Text style={styles.networkBtnText}>{isOffline ? "Mesh P2P" : "Online"}</Text>
           </Pressable>
-          <Pressable onPress={logout} style={styles.logoutBtn}>
-            <Ionicons name="log-out-outline" size={22} color={colors.textSecondary} />
-          </Pressable>
         </View>
       </View>
 
@@ -96,6 +94,10 @@ export default function HomeScreen() {
         <View style={styles.statCard}>
           <Text style={styles.statValue}>{activeCount}</Text>
           <Text style={styles.statLabel}>Activos</Text>
+        </View>
+        <View style={[styles.statCard, { borderColor: '#EAB308', backgroundColor: '#FEF9C3' }]}>
+          <Text style={[styles.statValue, { color: '#EAB308' }]}>{inProgressCount}</Text>
+          <Text style={styles.statLabel}>En progreso</Text>
         </View>
         <View style={[styles.statCard, styles.statDanger]}>
           <Text style={[styles.statValue, { color: colors.primary }]}>{highPriority}</Text>
@@ -189,11 +191,13 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
     marginBottom: 24,
   },
   statCard: {
     flex: 1,
+    minWidth: '30%',
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,

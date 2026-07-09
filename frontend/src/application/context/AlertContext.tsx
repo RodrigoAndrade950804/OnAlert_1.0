@@ -22,6 +22,7 @@ import {
   clearOfflineCache,
   loadMessages,
   loadUser,
+  loadToken,
   saveMessages,
   saveUser,
   updateIncidentStatus,
@@ -110,16 +111,26 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     setJwtToken(null);
   }, []);
 
-  const refreshData = useCallback(async () => {
+  const refreshData = useCallback(async (initialLoad = false) => {
     // 1. Obtener sesión local (solo el token y usuario base)
     const storedUser = await loadUser();
-    const storedMessages = await loadMessages();
-    setMessages(storedMessages);
+    const storedToken = await loadToken();
     
-    // Si no hay token en el estado, intentamos sacarlo de algún lado (AuthService ya lo maneja pero aseguramos)
-    let currentToken = jwtToken;
-    if (!currentToken && storedUser) {
-       // El token se guarda en AuthService, lo manejaremos ahí, por ahora usamos el jwtToken de estado
+    if (initialLoad) {
+      const storedMessages = await loadMessages();
+      setMessages(storedMessages);
+    }
+    
+    // Si no hay token en el estado, intentamos sacarlo de Storage
+    let currentToken = jwtToken || storedToken;
+    if (currentToken && currentToken !== jwtToken) {
+      setJwtToken(currentToken);
+    }
+
+    // Skip validation for superadmin (offline logic)
+    if (storedUser && storedUser.role === 'superadmin') {
+      setUser(storedUser);
+      return;
     }
 
     if (storedUser && currentToken) {
@@ -137,6 +148,14 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.warn('Error validando token, modo offline asumido o backend caído.');
         setUser(storedUser); // Fallback si no hay red
+      }
+    } else if (storedUser && !currentToken) {
+      // Si tenemos usuario pero no token (y no es offline mock demo), forzamos logout
+      if (storedUser.id.startsWith('demo_')) {
+        setUser(storedUser);
+      } else {
+        await logout();
+        return;
       }
     } else {
       setUser(storedUser);
@@ -187,7 +206,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   }, [user, isOffline]);
 
   useEffect(() => {
-    refreshData().finally(() => setIsLoading(false));
+    refreshData(true).finally(() => setIsLoading(false));
   }, [refreshData]);
 
   // WebSockets (Socket.io) para Notificaciones en Tiempo Real (HU-13)
@@ -330,10 +349,21 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   const sendMessage = useCallback(
     async (incidentId: string, text: string) => {
       if (!user || !text.trim()) return;
-      const updatedList = addChatMessage(messages, incidentId, user, text.trim());
-      const newMessage = updatedList[updatedList.length - 1]; // El mensaje recién creado
-      await saveMessages(updatedList);
-      setMessages(updatedList);
+      
+      const newMessage: ChatMessage = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        incidentId,
+        userId: user.id,
+        userName: user.name,
+        text: text.trim(),
+        createdAt: new Date().toISOString(),
+      };
+
+      setMessages(prev => {
+        const updated = [...prev, newMessage];
+        saveMessages(updated).catch(console.error);
+        return updated;
+      });
 
       // Emitir mensaje por WebSockets en tiempo real
       if (socketRef.current) {

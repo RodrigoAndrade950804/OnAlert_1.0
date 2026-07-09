@@ -11,6 +11,7 @@ import {
 
 const STORAGE_KEYS = {
   user: '@onalert_v2_user',
+  token: '@onalert_v2_token',
   incidents: '@onalert_v2_incidents',
   messages: '@onalert_v2_messages',
 };
@@ -40,6 +41,15 @@ export async function saveUser(user: User): Promise<void> {
 
 export async function clearUser(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEYS.user);
+  await AsyncStorage.removeItem(STORAGE_KEYS.token);
+}
+
+export async function loadToken(): Promise<string | null> {
+  return await AsyncStorage.getItem(STORAGE_KEYS.token);
+}
+
+export async function saveToken(token: string): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.token, token);
 }
 
 export async function loadMessages(): Promise<ChatMessage[]> {
