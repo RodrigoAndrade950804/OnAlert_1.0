@@ -125,15 +125,34 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Eliminar Usuario
+app.delete('/api/auth/user/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Primero eliminar asociaciones
+    await UserTenant.destroy({ where: { user_id: id } });
+    // Luego eliminar el usuario
+    const deleted = await User.destroy({ where: { id } });
+    if (deleted) {
+      res.json({ message: 'Usuario eliminado exitosamente' });
+    } else {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al eliminar usuario' });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'User Service' });
 });
 
 // Sincronizar Base de Datos y levantar servidor
-sequelize.sync().then(() => {
+sequelize.sync({ alter: true }).then(() => {
   console.log('✅ Base de datos PostgreSQL sincronizada');
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servicio de Usuarios corriendo en puerto ${PORT}`);
   });
 }).catch(err => {

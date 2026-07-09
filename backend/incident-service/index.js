@@ -184,7 +184,7 @@ app.get('/health', (req, res) => {
 
 // Conectar RabbitMQ y arrancar servidor
 connectRabbitMQ().then(() => {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servicio de Incidentes corriendo en puerto ${PORT}`);
   });
 });
